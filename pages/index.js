@@ -1,144 +1,184 @@
 import Head from "next/head";
-import { getAllPosts } from "../data/ads";
-import Image from "next/image";
-import styles from "../styles/Home.module.css";
 import style from "../styles/Home.module.css";
-import { addRequestMeta } from "next/dist/server/request-meta";
-import AdPreview from "../components/AdPreview";
-import AdPreviewDb from "../components/AdPreviewDb";
+import Image from "next/image";
 import HomeFooter from "../components/HomeFooter";
 import SearchHeader from "../components/SearchHeader";
 import SearchFilter from "../components/SearchFilter";
-
-import { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import Link from "next/link";
+import React, { useState, useEffect } from "react";
+import { collection, getDocs, orderBy } from "firebase/firestore";
 import { firebaseApp, storage, db } from "../connect/firebase";
 import { ref, getDownloadURL, listAll } from "firebase/storage";
 import {
   getImageListItemBarUtilityClass,
   useIsFocusVisible,
 } from "@mui/material";
-import { withCoalescedInvoke } from "next/dist/lib/coalesced-function";
+import HomeCategories from "../components/HomeCategories";
 
-export default function Home() {
-  const [ads, setAds] = useState([]);
-  const adsCollectionRef = collection(db, "ads");
+export default class Home extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { ads: [] };
+    this.init.bind(this);
+    this.getImgUrl.bind(this);
+    this.getAds.bind(this);
+    this.init();
+  }
 
-  useEffect(() => {
-    const getAds = async () => {
-      const data = await getDocs(adsCollectionRef);
-      setAds(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
-    };
-    getAds();
-  }, []);
+  async init() {
+    let adsCollectionRef = collection(db, "ads");
+    const data = await getDocs(adsCollectionRef);
+    let ads = data.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+    this.setState({ ads: ads });
 
-  const checkAds = () => {
-    if (ads.length > 0 && ads[0].previewImg !== "") {
-      ads.map((ad, index) => {
-        getImgUrl(ads, ad, index);
-      });
-    }
-  };
+    let adsReady = setInterval(() => {
+      if (Object.keys(this.state.ads).length > 0) {
+        clearInterval(adsReady);
+        ads.map((ad, index) => {
+          this.getImgUrl(ad, index);
+        });
+      }
+    }, 100);
+  }
 
-  useEffect(() => {
-    checkAds();
-  }, [ads]);
-
-  const getImgUrl = async (ads, ad, index) => {
+  async getImgUrl(ad, index) {
     let imgRef = ref(storage, "ad_images/" + ad.adImg);
+    let state = Object.assign({}, this.state);
     getDownloadURL(imgRef).then((url) => {
-      if (typeof ads[index].previewImg == "undefined") {
-        ads[index].previewImg = url;
-        setAds(ads);
+      if (typeof state.ads[index].previewImg == "undefined") {
+        state.ads[index].previewImg = url;
+        this.setState(state);
       }
     });
-  };
+  }
 
-  const getAds = () => {
-    return ads.map((ad) => {
-      console.log(ad);
-      return (
-        <div key={ad.id} className={style.ad_preview_box_desktop}>
-          <div className={style.time_ago_desktop}>• 2h ago</div>
-          <div className={style.desktop_ad_box_flex}>
-            <div className={style.desktop_ad_img}>
-              <img src={ad.previewImg} />
+  getAds() {
+    return this.state.ads
+      .filter((ad) => ad.adTitle.toLowerCase().includes(""))
+      .map((ad) => {
+        return (
+          <div key={ad.id}>
+            <Link href={`/ads/${ad.adId}`}>
+              <div className={style.ad_preview_box_desktop}>
+                <div className={style.time_ago_desktop}>• 2h ago</div>
+                <div className={style.desktop_ad_box_flex}>
+                  <div className={style.desktop_ad_img}>
+                    <img src={ad.previewImg} alt="" />
+                  </div>
+
+                  <div className={style.desktop_ad_content}>
+                    <div className={style.desktop_ad_title}>{ad.adTitle}</div>
+                    <div className={style.desktop_ad_location}>
+                      <img src="../icons/pin.svg" alt="" /> Skopje
+                    </div>
+                    <div className={style.desktop_price}>
+                      {ad.adPrice} {ad.adCurrency}{" "}
+                    </div>
+
+                    <div className={style.ad_stats}>
+                      <div className={style.ad_data}>
+                        <div className={style.ad_data_icon}>
+                          <img src="../icons/eye.svg" alt="" />
+                        </div>
+                        <div className={style.ad_data_number}>123</div>
+                      </div>
+
+                      <div className={style.ad_data}>
+                        <div className={style.ad_data_icon}>
+                          <img src="../icons/hart.svg" alt="" />
+                        </div>
+                        <div className={style.ad_data_number}>12</div>
+                      </div>
+
+                      <div className={style.ad_data}>
+                        <div className={style.ad_data_icon}>
+                          <img src="../icons/share.svg" alt="" />
+                        </div>
+                        <div className={style.ad_data_number}>5</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
+        );
+      });
+  }
+
+  render() {
+    return (
+      <div>
+        <Head>
+          <title>Hitno.mk</title>
+          <meta name="description" content="Generated by create next app" />
+          <link rel="icon" href="/favicon.ico" />
+          <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+          ></meta>
+        </Head>
+
+        <div className={style.desktop_header}>
+          <div className={style.desktop_size}>
+            <div className={style.desktop_logo}>
+              <img src="../icons/hitno.png" alt="" />
             </div>
-
-            <div className={style.desktop_ad_content}>
-              <div className={style.desktop_ad_title}>{ad.adTitle}</div>
-              <div className={style.desktop_ad_location}>
-                <img src="../../icons/pin.svg" /> Skopje
-              </div>
-              <div className={style.desktop_price}>
-                {ad.adPrice} {ad.adCurrency}{" "}
-              </div>
-
-              <div className={style.ad_stats}>
-                <div className={style.ad_data}>
-                  <div className={style.ad_data_icon}>
-                    <img src="../../icons/pin.svg" />
-                  </div>
-                  <div className={style.ad_data_number}>123</div>
-                </div>
-
-                <div className={style.ad_data}>
-                  <div className={style.ad_data_icon}>
-                    <img src="../../icons/pin.svg" />
-                  </div>
-                  <div className={style.ad_data_number}>12</div>
-                </div>
-
-                <div className={style.ad_data}>
-                  <div className={style.ad_data_icon}>
-                    <img src="../../icons/pin.svg" />
-                  </div>
-                  <div className={style.ad_data_number}>5</div>
-                </div>
-              </div>
+            <div className={style.desktop_menu_btn}>
+              <img src="../icons/more.svg" alt="" />
             </div>
           </div>
         </div>
-      );
-    });
-  };
 
-  return (
-    <div>
-      <Head>
-        <title>Hitno.mk</title>
-        <meta name="description" content="Generated by create next app" />
-        <link rel="icon" href="/favicon.ico" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1.0"
-        ></meta>
-      </Head>
+        <div className={style.desktop_container}>
+          <div className={style.desktop_filter_section}>
+            <SearchFilter />
 
-      <div className={styles.desktop_header}>
-        <div className={styles.desktop_size}>
-          <div className={styles.desktop_logo}>
-            <img src="../icons/hitno.png" />
+            {/*<HomeCategories />*/}
           </div>
-          <div className={styles.desktop_menu_btn}>
-            <img src="../icons/more.svg" />
+
+          <div className={style.container}>
+            <SearchHeader data={this.state.ads} />
+
+            {this.getAds()}
+
+            <HomeFooter />
+          </div>
+
+          <div className={style.desktop_signup_secton}>
+            <div className={style.desktop_signup_header}>
+              Продади се за 24 часа!
+            </div>
+            <div className={style.desktop_signup_buttons}>
+              <div className={style.d_signup_btn}>
+                <img src="../icons/facebook.svg" alt=" " /> Зачлени се со
+                Facebook
+              </div>
+              <div className={style.d_signup_btn}>
+                <img src="../icons/google.svg" alt=" " /> Зачлени се со Google
+              </div>
+            </div>
+
+            <div className={style.or_splitter}>
+              <div className={style.split_line}></div>
+              <div className={style.split_text}>or</div>
+              <div className={style.split_line}></div>
+            </div>
+            <div className={style.email_signup_btn}>Зачлени се со eMail</div>
+            <div className={style.terms_text}>
+              Зачленувајќи се, се сложуваш со нашата
+              <a href=""> Полиса на Корисници</a> и
+              <a href=""> Полиса на приватност</a>, вклучувајќи и
+              <a href=""> Употреба на колачиња.</a>
+            </div>
+
+            <div className={style.already_have_text}>
+              Веќе имаш сметка кај нас?
+            </div>
+            <div className={style.d_signin_btn}>Најави се</div>
           </div>
         </div>
       </div>
-
-      <div className={styles.desktop_container}>
-        <div className={styles.desktop_filter_section}>
-          <SearchFilter />
-        </div>
-
-        <div className={styles.container}>
-          <SearchHeader />
-
-          {getAds()}
-
-          <HomeFooter />
-        </div>
-      </div>
-    </div>
-  );
+    );
+  }
 }

@@ -1,0 +1,44 @@
+.ad_img {
+
+    height:200px;
+    width:100%;
+    object-fit: cover;
+}
+
+.ad_preview_box {
+
+    width: 450px;
+    margin-bottom: 20px;
+
+}
+
+.ad_preview_box:hover {
+
+    cursor: pointer;
+
+}
+
+
+@media (max-width: 992px) {
+
+    .ad_img {
+
+        height:200px;
+        width:100%;
+        object-fit: cover;
+    }
+    
+    .ad_preview_box {
+    
+        width: 450px;
+        margin-bottom: 20px;
+    
+    }
+    
+    .ad_preview_box:hover {
+    
+        cursor: pointer;
+    
+    }
+
+}
